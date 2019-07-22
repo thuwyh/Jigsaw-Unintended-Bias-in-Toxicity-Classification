@@ -1,3 +1,8 @@
+## evironment
+- python3.6.8
+- apex==0.1
+
+
 ## directory structure
 - project
     - `input`

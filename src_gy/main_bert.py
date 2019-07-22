@@ -33,7 +33,7 @@ from utils import (
 from pytorch_pretrained_bert import BertAdam, BertTokenizer
 from functools import partial
 
-ON_KAGGLE: bool = 'KAGGLE_WORKING_DIR' in os.environ
+# ON_KAGGLE: bool = 'KAGGLE_WORKING_DIR' in os.environ
 
 # loss1
 def custom_loss(pred, targets, loss_weight):
@@ -89,7 +89,7 @@ def convert_one_line(text, max_seq_length=None, tokenizer=None, split_point=0.25
 
 class TrainDataset(Dataset):
 
-    def __init__(self, text, lens, target, identity_df,  weights, model="mybert", split_point=0.25):
+    def __init__(self, text, lens, target, identity_df,  weights, model="mybert", split_point=0.25, do_lower_case=True):
         super(TrainDataset, self).__init__()
 
         self._text = text
@@ -99,13 +99,6 @@ class TrainDataset(Dataset):
         self._weights = weights
         self._split_point = split_point
         VOCAB_PATH = Path('../input/torch-bert-weights/%s-vocab.txt'%(model))
-
-        if model in ["bert-base-uncased", "bert-large-uncased", "mybert", "mybertlarge", "wmm"] :
-            do_lower_case = True
-        elif model in ["bert-base-cased", "bert-large-cased", "mybertlargecased", "wwmcased"]:
-            do_lower_case = False
-        else:
-            exit(1)
 
         self._tokenizer = BertTokenizer.from_pretrained(
             VOCAB_PATH, cache_dir=None, do_lower_case=do_lower_case)
@@ -245,6 +238,7 @@ def main():
     arg('--warmup', type=float, default=0.05)
     arg('--split_point',type=float, default=0.3)
     arg('--bsample', type=bool, default=False)
+    arg('--do_lower_case', type=bool, default=True)
     args = parser.parse_args()
 
     set_seed()
@@ -296,7 +290,7 @@ def main():
                                                        'obscene', 'identity_attack', 'insult',
                                                        'threat']].values.tolist(),
                                     identity_df=train_fold[identity_columns], weights=train_fold['weights'].tolist(),
-                                    model=args.model, split_point=args.split_point)
+                                    model=args.model, split_point=args.split_point, do_lower_case=args.do_lower_case)
         if args.bsample:
             bbsampler = BucketBatchSampler(training_set, batch_size=args.batch_size, drop_last=True,
                                            sort_key=lambda x: x[1], biggest_batches_first=None,
@@ -316,7 +310,7 @@ def main():
             valid_set = TrainDataset(valid_fold['comment_text'].tolist(), lens=valid_fold['len'].tolist(),
                                      target=valid_fold['binary_target'].values.tolist()
                                      , identity_df=valid_fold[identity_columns], weights=valid_fold['weights'].tolist(),
-                                     model=args.model, split_point=args.split_point)
+                                     model=args.model, split_point=args.split_point, do_lower_case=args.do_lower_case)
             valid_loader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
                                       num_workers=args.workers)
         else:
@@ -376,7 +370,8 @@ def main():
         valid_set = TrainDataset(valid_fold['comment_text'].tolist(), lens=valid_fold['len'].tolist(),
                                  target=valid_fold[['binary_target']].values.tolist(),
                                  identity_df=valid_fold[identity_columns],
-                                 weights=valid_fold['weights'].tolist(), model=args.model, split_point=args.split_point)
+                                 weights=valid_fold['weights'].tolist(), model=args.model, split_point=args.split_point,
+                                 do_lower_case=args.do_lower_cased)
         valid_loader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
                                   num_workers=args.workers)
         model = BertModel(BERT_PRETRAIN_PATH)
