@@ -1,1 +1,4 @@
 .idea/
+input/
+experiments/
+kernel_inference_dataset/
