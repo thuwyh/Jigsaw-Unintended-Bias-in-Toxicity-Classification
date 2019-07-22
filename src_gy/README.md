@@ -39,7 +39,7 @@
                 - pytorch_model.bin
                 - vocab.txt
             - wwmcased-vocab.txt
-    - `src`
+    - `src_gy`
     - `experiments`, checkpoints, logs and params
     - `kernel_inference_dataset`, dataset on kernel for the best commit
 
