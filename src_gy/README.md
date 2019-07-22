@@ -9,8 +9,39 @@
                 - pytorch_model.bin
                 - vocab.json
             - gpt2-vocab.json
+                
+            - bert-base-cased
+                - config.json
+                - pytorch_model.bin
+                - vocab.txt
+            - bert-base-cased-vocab.txt
+            
+            - bert-large-cased
+                - config.json
+                - pytorch_model.bin
+                - vocab.txt
+            - bert-large-cased-vocab.txt
+            
+            - mybert
+                - config.json
+                - pytorch_model.bin
+                - vocab.txt
+            - mybert-vocab.txt
+            
+            - mybertlargecased
+                - config.json
+                - pytorch_model.bin
+                - vocab.txt
+            - mybertlargecased-vocab.txt
+            
+            - wwmcased
+                - config.json
+                - pytorch_model.bin
+                - vocab.txt
+            - wwmcased-vocab.txt
     - `src`
     - `experiments`, checkpoints, logs and params
+    - `kernel_inference_dataset`, dataset on kernel for the best commit
 
 ## usage 
 ### under src_gy
@@ -35,6 +66,8 @@ finetine-bert-base-uncased(0623_finetuned_bert_base_uncased, finetuned bert-base
 - . train_finetune_bert_base_uncased.sh
 
 finetune-bert-large-cased(finalall_finetuned_bert_large_cased, finetuned bert-large-cased by yuanhao)
+
+- . train_finetune_bert_large_cased.sh
 
 bert-whole-word-masking cased model(finalall_wwm_cased)
 
