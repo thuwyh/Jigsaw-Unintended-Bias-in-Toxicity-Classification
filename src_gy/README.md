@@ -41,7 +41,7 @@
             - wwmcased-vocab.txt
     - `src_gy`
     - `experiments`, checkpoints, logs and params
-    - `kernel_inference_dataset`, dataset on kernel for the best commit
+    - `kernel_inference_datasets`, dataset on kernel for the best commit
 
 ## usage 
 ### under src_gy
