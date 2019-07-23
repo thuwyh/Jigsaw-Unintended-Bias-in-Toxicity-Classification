@@ -14,12 +14,6 @@
                 - pytorch_model.bin
                 - vocab.json
             - gpt2-vocab.json
-                
-            - bert-base-cased
-                - config.json
-                - pytorch_model.bin
-                - vocab.txt
-            - bert-base-cased-vocab.txt
             
             - bert-large-cased
                 - config.json
