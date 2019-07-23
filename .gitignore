@@ -2,3 +2,4 @@
 input/
 experiments/
 kernel_inference_dataset/
+__pycache__/

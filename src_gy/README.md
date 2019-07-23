@@ -1,3 +1,8 @@
+## evironment
+- python3.6.8
+- apex==0.1
+
+
 ## directory structure
 - project
     - `input`
@@ -9,12 +14,6 @@
                 - pytorch_model.bin
                 - vocab.json
             - gpt2-vocab.json
-                
-            - bert-base-cased
-                - config.json
-                - pytorch_model.bin
-                - vocab.txt
-            - bert-base-cased-vocab.txt
             
             - bert-large-cased
                 - config.json
@@ -53,23 +52,19 @@ gpt2 model( finalall_gpt2_keras )
 
 - . train_gpt2.sh
 
-bert-base-cased model(0623_bert_base_cased_lower)
-
-- . train_bert_base_cased.sh
-
 bert-large-cased model(0623_bert_large_cased_lower)
 
 - . train_bert_large_cased.sh
 
-finetine-bert-base-uncased(0623_finetuned_bert_base_uncased, finetuned bert-base-uncased by yuanhao)
+finetine-bert-base-uncased(0623_finetuned_bert_base_uncased, trained on finetuned bert-base-uncased from yuanhao)
 
 - . train_finetune_bert_base_uncased.sh
 
-finetune-bert-large-cased(finalall_finetuned_bert_large_cased, finetuned bert-large-cased by yuanhao)
+finetune-bert-large-cased(finalall_finetuned_bert_large_cased, trained on finetuned bert-large-cased from yuanhao)
 
 - . train_finetune_bert_large_cased.sh
 
 bert-whole-word-masking cased model(finalall_wwm_cased)
 
-- .train-bert-wwmcased.sh
+- . train-bert-wwmcased.sh
 
