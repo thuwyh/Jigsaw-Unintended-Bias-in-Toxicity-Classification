@@ -48,11 +48,12 @@ cd ..
 ```
 
 ### pretrain bert on the competition data
+
 ```bash
 cd pretrain_bert
-python finetune_lm_base_uncased --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-base-uncased --do_lower_case --output_dir ../input/mybert_base_uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_large_uncased --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-large-uncased --do_lower_case --output_dir ../input/mybert_large_uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_large_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-large-cased --output_dir ../input/mybert_large_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
 python finetune_lm_wwm.py --pregenerated_data ../input/lm_data_wwm/ --bert_model bert-large-wwm --do_lower_case --output_dir ../input/mybert_wwm --epochs 1 --fp16 --gradient_accumulation_steps 4
-python finetune_lm_large_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-large-cased --output_dir ../input/mybert_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
 python finetune_lm_base_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-base-cased --output_dir ../input/mybert_base_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
 cd ..
 ```
