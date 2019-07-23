@@ -13,7 +13,7 @@ Jigsaw Unintended Bias in Toxicity Classification
 ## models
 - bert-large-uncased (finetuned language model)
 - bert-large-cased (finetuned language model)
-- bert-large-cased (finetuned language model, trained with uncased data)
+- bert-large-cased (trained with uncased data)
 - bert-large-wwm-uncased (finetuned language model)
 - bert-large-wwm-cased
 - bert-base-uncased (finetuned language model)
@@ -31,7 +31,8 @@ Jigsaw Unintended Bias in Toxicity Classification
     - bert-large-cased
     - bert-large-uncased
     - bert-large-uncased-wwm
-
+    - bert-large-cased-wwm
+    - gpt2
 
 ## training procedure
 ### prepare data
