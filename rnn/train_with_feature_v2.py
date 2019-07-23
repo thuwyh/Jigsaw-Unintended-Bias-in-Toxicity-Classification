@@ -44,8 +44,6 @@ def main():
     arg = parser.add_argument
     arg('mode', choices=['train', 'validate', 'predict'])
     arg('run_root')
-    arg('--model', default='bert_base')
-    arg('--pretrained', type=int, default=0)
     arg('--batch-size', type=int, default=32)
     arg('--step', type=int, default=1)
     arg('--workers', type=int, default=2)

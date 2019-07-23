@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 import shutil
 from collections import OrderedDict
 from functools import partial
@@ -30,7 +29,6 @@ def custom_loss(pred, targets, loss_weight):
     bce_loss_1 = nn.BCEWithLogitsLoss(weight=targets[:, 1:2])(pred[:, :1], targets[:, :1])
     bce_loss_2 = nn.BCEWithLogitsLoss()(pred[:, 1:], targets[:, 2:])
     return (bce_loss_1 * loss_weight) + bce_loss_2
-
 
 # loss2
 def custom_loss2(pred, targets, loss_weight):
@@ -79,7 +77,7 @@ def convert_one_line(text, max_seq_length=None, tokenizer=None, split_point=0.25
 
 class TrainDataset(Dataset):
 
-    def __init__(self, text, lens, target, identity_df, weights, model="mybert", split_point=0.25):
+    def __init__(self, text, lens, target, identity_df, weights, model="mybert", split_point=0.25, do_lower_case=True):
         super(TrainDataset, self).__init__()
 
         self._text = text
@@ -89,14 +87,6 @@ class TrainDataset(Dataset):
         self._weights = weights
         self._split_point = split_point
         VOCAB_PATH = Path('../input/torch-bert-weights/%s-vocab.txt' % (model))
-
-        if model in ["bert-base-uncased", "bert-large-uncased", "mybert", "mybert-large-uncased", "mybert-wwm-uncased",
-                     'mybert-base-uncased']:
-            do_lower_case = True
-        elif model in ["bert-base-cased", "bert-large-cased", "mybertlargecased", "mybert-base-cased"]:
-            do_lower_case = False
-        else:
-            raise ValueError('%s is not a valid model' % model)
 
         self._tokenizer = BertTokenizer.from_pretrained(
             VOCAB_PATH, cache_dir=None, do_lower_case=do_lower_case)
@@ -238,7 +228,8 @@ def main():
     arg('--lr_layerdecay', type=float, default=0.95)
     arg('--warmup', type=float, default=0.05)
     arg('--split_point', type=float, default=0.3)
-    arg('--bsample', type=bool, default=True)
+    arg('--bsample', type=bool, default=False)
+    arg('--do_lower_case', type=bool, default=True)
     args = parser.parse_args()
 
     set_seed()
@@ -246,26 +237,11 @@ def main():
     run_root = Path('../experiments/' + args.run_root)
     DATA_ROOT = Path('../input/jigsaw-unintended-bias-in-toxicity-classification')
 
-    folds = pd.read_pickle(DATA_ROOT / 'folds.pkl')
+    folds = pd.read_pickle(str(DATA_ROOT) + args.fold_name)
+    print(folds['weights'].mean())
 
     identity_columns = ['male', 'female', 'homosexual_gay_or_lesbian', 'christian', 'jewish',
                         'muslim', 'black', 'white', 'psychiatric_or_mental_illness']
-
-    weights = np.ones((len(folds),)) / 4
-    # # Subgroup
-    weights += (folds[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int) / 4
-    # # Background Positive, Subgroup Negative
-    weights += (((folds['target'].values >= 0.5).astype(bool).astype(np.int) +
-                 (folds[identity_columns].fillna(0).values < 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
-        bool).astype(np.int) / 4
-    # # Background Negative, Subgroup Positive
-    weights += (((folds['target'].values < 0.5).astype(bool).astype(np.int) +
-                 (folds[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
-        bool).astype(np.int) / 4
-    # weights += ((df['target'].values>=0.5).astype(np.int)*(df[identity_columns].values>=0.5).mean(axis=1) + \
-    #             (df['target'].values<0.5).astype(np.int)*(df[identity_columns].values<0.5).mean(axis=1))/4
-    folds['weights'] = weights
-    print(folds['weights'].mean())
 
     if args.mode == "train_all":
         train_fold = folds
@@ -305,7 +281,7 @@ def main():
                                                        'obscene', 'identity_attack', 'insult',
                                                        'threat']].values.tolist(),
                                     identity_df=train_fold[identity_columns], weights=train_fold['weights'].tolist(),
-                                    model=args.model, split_point=args.split_point)
+                                    model=args.model, split_point=args.split_point, do_lower_case=args.do_lower_case)
         if args.bsample:
             bbsampler = BucketBatchSampler(training_set, batch_size=args.batch_size, drop_last=True,
                                            sort_key=lambda x: x[1], biggest_batches_first=None,
@@ -325,13 +301,12 @@ def main():
             valid_set = TrainDataset(valid_fold['comment_text'].tolist(), lens=valid_fold['len'].tolist(),
                                      target=valid_fold['binary_target'].values.tolist()
                                      , identity_df=valid_fold[identity_columns], weights=valid_fold['weights'].tolist(),
-                                     model=args.model, split_point=args.split_point)
+                                     model=args.model, split_point=args.split_point, do_lower_case=args.do_lower_case)
             valid_loader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
                                       num_workers=args.workers)
         else:
             valid_loader = None
 
-        # model = BertForSequenceClassification.from_pretrained(BERT_PRETRAIN_PATH,cache_dir=None,num_labels=1)
         model = BertModel(BERT_PRETRAIN_PATH)
         model.cuda()
 
@@ -339,10 +314,10 @@ def main():
                           'mybert-base-uncased']:
             NUM_LAYERS = 12
         elif args.model in ["bert-large-uncased", "bert-large-cased", "mybertlarge", "wmm", "mybertlargecased",
-                            "mybert-large-uncased", 'mybert-wwm-uncased']:
+                            "wwmcased",  "mybert-large-uncased", 'mybert-wwm-uncased']:
             NUM_LAYERS = 24
         else:
-            raise ValueError('%s is not a valid model' % args.model)
+            exit(1)
 
         optimizer_grouped_parameters = [
             {'params': model.bert.bert.embeddings.parameters(), 'lr': args.lr * (args.lr_layerdecay ** NUM_LAYERS)},
@@ -377,7 +352,8 @@ def main():
         valid_set = TrainDataset(valid_fold['comment_text'].tolist(), lens=valid_fold['len'].tolist(),
                                  target=valid_fold[['binary_target']].values.tolist(),
                                  identity_df=valid_fold[identity_columns],
-                                 weights=valid_fold['weights'].tolist(), model=args.model, split_point=args.split_point)
+                                 weights=valid_fold['weights'].tolist(), model=args.model, split_point=args.split_point,
+                                 do_lower_case=args.do_lower_cased)
         valid_loader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
                                   num_workers=args.workers)
         model = BertModel(BERT_PRETRAIN_PATH)
@@ -441,9 +417,7 @@ def train(args, model: nn.Module, optimizer, scheduler, criterion, *,
             outputs = model(inputs, attention_mask=attention_mask, labels=None)
 
             loss = criterion(outputs, targets) / args.step
-            # loss = nn.BCEWithLogitsLoss(weight=weights)(outputs, targets)
             batch_size = inputs.size(0)
-            # loss.backward()
             if (i + 1) % args.step == 0:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
@@ -463,7 +437,6 @@ def train(args, model: nn.Module, optimizer, scheduler, criterion, *,
         write_event(log, step, epoch=epoch, loss=mean_loss)
         tq.close()
 
-        # if epoch<7: continue
         if args.mode == "train":
             valid_metrics = validation(model, criterion, valid_df, valid_loader, args)
             write_event(log, step, **valid_metrics)
@@ -479,8 +452,6 @@ def train(args, model: nn.Module, optimizer, scheduler, criterion, *,
                 best_epoch = epoch
             else:
                 pass
-        # if isinstance(criterion,nn.BCEWithLogitsLoss) and lr<0.00002:
-        # break
     return True
 
 
@@ -524,10 +495,6 @@ def validation(model: nn.Module, criterion, valid_df, valid_loader, args, save_r
     score, bias_metrics = evaluator.get_final_metric(all_predictions)
     if progress:
         tq.close()
-    # valid_copy = valid_df.copy()
-    # valid_copy['model'] = all_predictions
-    # bias_metrics_df = compute_bias_metrics_for_model(valid_copy, 'model', label_col='target')
-    # score = get_final_metric(bias_metrics_df, calculate_overall_auc(valid_copy, 'model'))
 
     metrics = dict()
     metrics['loss'] = np.mean(all_losses)

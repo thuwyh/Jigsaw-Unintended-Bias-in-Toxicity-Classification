@@ -2,9 +2,13 @@
 Jigsaw Unintended Bias in Toxicity Classification
 
 ## requirements:
+- python3
 - pytorch 1.1.0
+- pytorch-pretrained-bert
 - apex
 - spacy
+- gensim
+
 
 ## models
 - bert-large-uncased (finetuned language model)
@@ -27,3 +31,51 @@ Jigsaw Unintended Bias in Toxicity Classification
     - bert-large-cased
     - bert-large-uncased
     - bert-large-uncased-wwm
+
+
+## training procedure
+### prepare data
+```bash
+cd prepare_data
+python make_folds.py
+python make_folds_gy.py
+python prepare_corpus.py
+python prepare_lm_data_cased.py
+python prepare_lm_data_uncased.py
+python prepare_lm_data_wwm.py
+python prepare_rnn_data.py
+cd ..
+```
+
+### pretrain bert on the competition data
+```bash
+cd pretrain_bert
+python finetune_lm_base_uncased --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-base-uncased --do_lower_case --output_dir ../input/mybert_base_uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_wwm.py --pregenerated_data ../input/lm_data_wwm/ --bert_model bert-large-wwm --do_lower_case --output_dir ../input/mybert_wwm --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_large_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-large-cased --output_dir ../input/mybert_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_base_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-base-cased --output_dir ../input/mybert_base_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
+cd ..
+```
+
+### train bert models
+```bash
+cd bert
+./train_bert_large_cased.sh
+./train_finetune_bert_base_uncased.sh
+./train_finetune_bert_large_cased.sh
+./train-bert-wwmcased.sh
+```
+
+### train gpt2 models
+```bash
+cd gpt2
+./train_gpt2.sh
+cd ..
+```
+
+### train rnn models
+```bash
+cd rnn
+python train_with_feature_v2.py
+cd ..
+```

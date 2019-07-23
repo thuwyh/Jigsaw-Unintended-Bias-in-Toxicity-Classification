@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 from collections import OrderedDict
 from functools import partial
@@ -12,11 +13,12 @@ import pandas as pd
 import torch
 import tqdm
 from apex import amp
-from pytorch_pretrained_bert import BertAdam, BertTokenizer
-from pytorch_pretrained_bert import BertForSequenceClassification
+from keras.preprocessing.sequence import pad_sequences
+from nltk.tokenize import TweetTokenizer
+from pytorch_pretrained_bert import BertAdam, GPT2Tokenizer
+from pytorch_pretrained_bert import GPT2Model
 from sklearn.metrics import roc_auc_score
 from torch import nn
-from torch.nn.utils.rnn import pad_sequence
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -24,6 +26,9 @@ from utils import (
     BucketBatchSampler,
     get_learning_rate, set_seed,
     write_event, load_model)
+
+ON_KAGGLE: bool = 'KAGGLE_WORKING_DIR' in os.environ
+
 
 # loss1
 def custom_loss(pred, targets, loss_weight):
@@ -66,20 +71,34 @@ def custom_loss2(pred, targets, loss_weight):
     return (bce_loss_1 * loss_weight) + bce_loss_2 + extra_loss_1 * 0.1
 
 
+tokenizer = TweetTokenizer()
+
+
+# The dictionary was generated in the compare and investigation phase in the other notebook
+
+# compile all special symbols from the dictionary to one regex function
+
+
 def convert_one_line(text, max_seq_length=None, tokenizer=None, split_point=0.25):
-    max_seq_length -= 2
-    tokens_a = tokenizer.tokenize(text)
+    # max_seq_length -= 2
+    # tokens_a = tokenizer.tokenize(text)
+    # if len(tokens_a) > max_seq_length:
+    #     tokens_a = tokens_a[:max_seq_length]
+    # one_token = tokenizer.convert_tokens_to_ids(
+    #     ["[CLS]"]+tokens_a+["[SEP]"])#+[0] * (max_seq_length - len(tokens_a))
+    # print(text)
+    one_token = tokenizer.encode(preprocess(text))
+    # one_token = tokenizer.encode(text)
     int_split = int(split_point * max_seq_length)
-    if len(tokens_a) > max_seq_length:
-        tokens_a = tokens_a[:int_split] + tokens_a[int_split - max_seq_length:]
-    one_token = tokenizer.convert_tokens_to_ids(
-        ["[CLS]"] + tokens_a + ["[SEP]"])  # +[0] * (max_seq_length - len(tokens_a))
+    if len(one_token) > max_seq_length:
+        one_token = one_token[:int_split] + one_token[int_split - max_seq_length:]
+    # one_token = [0] * (max_seq_length - len(one_token)) + one_token
     return one_token
 
 
 class TrainDataset(Dataset):
 
-    def __init__(self, text, lens, target, identity_df, weights, model="mybert", split_point=0.25):
+    def __init__(self, text, lens, target, identity_df, weights, model="gpt2", split_point=0.25):
         super(TrainDataset, self).__init__()
 
         self._text = text
@@ -88,18 +107,8 @@ class TrainDataset(Dataset):
         self._identity_df = identity_df
         self._weights = weights
         self._split_point = split_point
-        VOCAB_PATH = Path('../input/torch-bert-weights/%s-vocab.txt' % (model))
-
-        if model in ["bert-base-uncased", "bert-large-uncased", "mybert", "mybert-large-uncased", "mybert-wwm-uncased",
-                     'mybert-base-uncased']:
-            do_lower_case = True
-        elif model in ["bert-base-cased", "bert-large-cased", "mybertlargecased", "mybert-base-cased"]:
-            do_lower_case = False
-        else:
-            raise ValueError('%s is not a valid model' % model)
-
-        self._tokenizer = BertTokenizer.from_pretrained(
-            VOCAB_PATH, cache_dir=None, do_lower_case=do_lower_case)
+        VOCAB_PATH = Path('../input/torch-bert-weights/%s' % (model))
+        self._tokenizer = GPT2Tokenizer.from_pretrained(VOCAB_PATH)
 
     def __len__(self):
         return len(self._text)
@@ -110,42 +119,73 @@ class TrainDataset(Dataset):
         target = self._target[idx]
         # identity_df = self._identity_df.iloc[[idx], :]
         weight = self._weights[idx]
-        return torch.LongTensor(convert_one_line(text, max_seq_length=220, tokenizer=self._tokenizer,
-                                                 split_point=self._split_point)), lens, target, weight
+        text = torch.LongTensor(
+            convert_one_line(text, max_seq_length=220, tokenizer=self._tokenizer, split_point=self._split_point))
+        return text, lens, target, weight
 
 
 def collate_fn(batch):
     text, lens, targets, weights = zip(*batch)
     # identity_df = pd.concat(list(identitys)).reset_index(drop=True)
-    text = pad_sequence(text, batch_first=True)
+    # text = pad_sequence(text, batch_first=True, padding_value=0)
+    text = pad_sequences(text, padding='pre')
+    text = torch.LongTensor(text)
     lens = torch.LongTensor(lens)
     weights = torch.FloatTensor(weights)
     targets = torch.FloatTensor(targets)
     return text, lens, targets, weights
 
 
-class BertModel(nn.Module):
+def remove_ord(text):
+    text = list(text.strip())
+    for idx, t in enumerate(text):
+        if ord(t) > 255:
+            text[idx] = ""
+    text = ''.join(text)
+    return text
+
+
+def preprocess(text):
+    words = tokenizer.tokenize(text)
+    # words = [clean_text(t) for t in words]
+    # words = [emoji.demojize(t) for t in words]
+    # words = [replace_smilies(t) for t in words]
+    # words = [replace_symbol_special(t) for t in words]
+    words = [remove_ord(t) for t in words]
+
+    text = ' '.join(words)
+    # remove all double spaces potentially appearing after pre-processing.
+    text = re.sub(r' +', ' ', text)
+    # print(text)
+    return text
+
+
+class Gpt2Model(nn.Module):
 
     def __init__(self, pretrain_path, dropout=0.1):
-        super(BertModel, self).__init__()
-        self.bert = BertForSequenceClassification.from_pretrained(pretrain_path, cache_dir=None, num_labels=1)
+        super(Gpt2Model, self).__init__()
+        self.bert = GPT2Model.from_pretrained(pretrain_path)
+        self.dropout = nn.Dropout(dropout)
         self.aux_head = nn.Sequential(
             OrderedDict([
                 ('dropout', nn.Dropout(dropout)),
-                ('clf', nn.Linear(self.bert.config.hidden_size, 6)),
+                ('clf', nn.Linear(self.bert.config.n_embd, 6)),
             ])
         )
         self.main_head = nn.Sequential(
             OrderedDict([
                 ('dropout', nn.Dropout(dropout)),
-                ('clf', nn.Linear(self.bert.config.hidden_size, 1))
+                ('clf', nn.Linear(self.bert.config.n_embd, 1))
             ])
         )
 
     def forward(self, input_ids, token_type_ids=None, attention_mask=None, labels=None):
-        _, pooled_output = self.bert.bert(input_ids, token_type_ids, attention_mask, output_all_encoded_layers=False)
+        hidden_states, past = self.bert(input_ids)
+        pooled_output = hidden_states[:, -1, :]
+
         aux_logits = self.aux_head(pooled_output)
         main_logits = self.main_head(pooled_output)
+
         out = torch.cat([main_logits, aux_logits], 1)
         return out
 
@@ -238,7 +278,7 @@ def main():
     arg('--lr_layerdecay', type=float, default=0.95)
     arg('--warmup', type=float, default=0.05)
     arg('--split_point', type=float, default=0.3)
-    arg('--bsample', type=bool, default=True)
+    arg('--bsample', type=bool, default=False)
     args = parser.parse_args()
 
     set_seed()
@@ -246,26 +286,11 @@ def main():
     run_root = Path('../experiments/' + args.run_root)
     DATA_ROOT = Path('../input/jigsaw-unintended-bias-in-toxicity-classification')
 
-    folds = pd.read_pickle(DATA_ROOT / 'folds.pkl')
+    folds = pd.read_pickle(str(DATA_ROOT) + args.fold_name)
+    print(folds['weights'].mean())
 
     identity_columns = ['male', 'female', 'homosexual_gay_or_lesbian', 'christian', 'jewish',
                         'muslim', 'black', 'white', 'psychiatric_or_mental_illness']
-
-    weights = np.ones((len(folds),)) / 4
-    # # Subgroup
-    weights += (folds[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int) / 4
-    # # Background Positive, Subgroup Negative
-    weights += (((folds['target'].values >= 0.5).astype(bool).astype(np.int) +
-                 (folds[identity_columns].fillna(0).values < 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
-        bool).astype(np.int) / 4
-    # # Background Negative, Subgroup Positive
-    weights += (((folds['target'].values < 0.5).astype(bool).astype(np.int) +
-                 (folds[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
-        bool).astype(np.int) / 4
-    # weights += ((df['target'].values>=0.5).astype(np.int)*(df[identity_columns].values>=0.5).mean(axis=1) + \
-    #             (df['target'].values<0.5).astype(np.int)*(df[identity_columns].values<0.5).mean(axis=1))/4
-    folds['weights'] = weights
-    print(folds['weights'].mean())
 
     if args.mode == "train_all":
         train_fold = folds
@@ -332,33 +357,42 @@ def main():
             valid_loader = None
 
         # model = BertForSequenceClassification.from_pretrained(BERT_PRETRAIN_PATH,cache_dir=None,num_labels=1)
-        model = BertModel(BERT_PRETRAIN_PATH)
+        model = Gpt2Model(BERT_PRETRAIN_PATH)
         model.cuda()
+        # param_optimizer = list(model.named_parameters())
+        # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+        # optimizer_grouped_parameters = [
+        #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay) and p.requires_grad], 'weight_decay': 0.01},
+        #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay) and p.requires_grad], 'weight_decay': 0.0}
+        # ]
 
-        if args.model in ["bert-base-uncased", "bert-base-cased", "mybert", "gpt2", 'mybert-base-cased',
-                          'mybert-base-uncased']:
+        if args.model in ["bert-base-uncased", "bert-base-cased", "mybert", "gpt2"]:
             NUM_LAYERS = 12
-        elif args.model in ["bert-large-uncased", "bert-large-cased", "mybertlarge", "wmm", "mybertlargecased",
-                            "mybert-large-uncased", 'mybert-wwm-uncased']:
+        elif args.model in ["bert-large-uncased", "bert-large-cased", "mybertlarge", "wwm"]:
             NUM_LAYERS = 24
         else:
-            raise ValueError('%s is not a valid model' % args.model)
+            exit(1)
 
         optimizer_grouped_parameters = [
-            {'params': model.bert.bert.embeddings.parameters(), 'lr': args.lr * (args.lr_layerdecay ** NUM_LAYERS)},
+            {'params': model.bert.wte.parameters(), 'lr': args.lr * (args.lr_layerdecay ** NUM_LAYERS)},
+            {'params': model.bert.wpe.parameters(), 'lr': args.lr * (args.lr_layerdecay ** NUM_LAYERS)},
             {'params': model.main_head.parameters(), 'lr': args.lr},
             {'params': model.aux_head.parameters(), 'lr': args.lr},
-            {'params': model.bert.bert.pooler.parameters(), 'lr': args.lr}
+            {'params': model.bert.ln_f.parameters(), 'lr': args.lr}
         ]
 
         for layer in range(NUM_LAYERS):
             optimizer_grouped_parameters.append(
-                {'params': model.bert.bert.encoder.layer.__getattr__('%d' % (NUM_LAYERS - 1 - layer)).parameters(),
+                {'params': model.bert.h.__getattr__('%d' % (NUM_LAYERS - 1 - layer)).parameters(),
                  'lr': args.lr * (args.lr_layerdecay ** layer)},
             )
         optimizer = BertAdam(optimizer_grouped_parameters, lr=args.lr, warmup=args.warmup,
                              t_total=len(training_loader) // args.step)
 
+        # optimizer = BertAdam(optimizer_grouped_parameters,
+        #              lr=args.lr,
+        #              warmup=0.05,
+        #              )
         scheduler = ReduceLROnPlateau(optimizer, patience=0, factor=0.1, verbose=True, mode='max', min_lr=1e-7)
 
         model, optimizer = amp.initialize(model, optimizer, opt_level="O2", verbosity=0)
@@ -380,7 +414,7 @@ def main():
                                  weights=valid_fold['weights'].tolist(), model=args.model, split_point=args.split_point)
         valid_loader = DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn,
                                   num_workers=args.workers)
-        model = BertModel(BERT_PRETRAIN_PATH)
+        model = Gpt2Model(BERT_PRETRAIN_PATH)
         load_model(model, run_root / ('best-model-%d.pt' % args.fold), multi2single=False)
         model.cuda()
 
