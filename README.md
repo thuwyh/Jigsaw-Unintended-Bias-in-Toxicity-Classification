@@ -40,9 +40,9 @@ cd prepare_data
 python make_folds.py
 python make_folds_gy.py
 python prepare_corpus.py
-python prepare_lm_data_cased.py
-python prepare_lm_data_uncased.py
-python prepare_lm_data_wwm.py
+python prepare_lm_data_cased.py --train_corpus ../input/lm_corpus.txt --output_dir ../input/lm_data_cased/ --epochs_to_generate 1 --max_seq_len 256 --bert_model bert-base-uncased
+python prepare_lm_data_uncased.py --train_corpus ../input/lm_corpus.txt --do_lower_case --output_dir ../input/lm_data_uncased/ --epochs_to_generate 1 --max_seq_len 256 --bert_model bert-base-uncased
+python prepare_lm_data_wwm.py --train_corpus ../input/lm_corpus.txt --do_lower_case --do_lower_case --output_dir ../input/lm_data_wwm/ --epochs_to_generate 1 --max_seq_len 256 --bert_model bert-base-uncased
 python prepare_rnn_data.py
 cd ..
 ```
