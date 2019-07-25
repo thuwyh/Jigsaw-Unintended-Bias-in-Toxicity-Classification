@@ -262,8 +262,7 @@ def main():
     weights += (((folds['target'].values < 0.5).astype(bool).astype(np.int) +
                  (folds[identity_columns].fillna(0).values >= 0.5).sum(axis=1).astype(bool).astype(np.int)) > 1).astype(
         bool).astype(np.int) / 4
-    # weights += ((df['target'].values>=0.5).astype(np.int)*(df[identity_columns].values>=0.5).mean(axis=1) + \
-    #             (df['target'].values<0.5).astype(np.int)*(df[identity_columns].values<0.5).mean(axis=1))/4
+
     folds['weights'] = weights
     print(folds['weights'].mean())
 
