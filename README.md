@@ -1,5 +1,6 @@
 # Jigsaw-Unintended-Bias-in-Toxicity-Classification
-Jigsaw Unintended Bias in Toxicity Classification
+Since we have rearranged the repo and we do not have enough time to rerun all scripts, there may be some path related errors.
+Please kindly modify the code or put the files in the right place required by the code.
 
 ## requirements:
 - python3
@@ -8,7 +9,6 @@ Jigsaw Unintended Bias in Toxicity Classification
 - apex
 - spacy
 - gensim
-
 
 ## models
 - bert-large-uncased (finetuned language model)
@@ -33,6 +33,9 @@ Jigsaw Unintended Bias in Toxicity Classification
     - bert-large-uncased-wwm
     - bert-large-cased-wwm
     - gpt2
+    - bert-base-uncased-vocab.txt
+    - bert-large-cased-vocab.txt
+    - bert-large-uncased-whole-word-masking-vocab.txt
 
 ## training procedure
 ### prepare data

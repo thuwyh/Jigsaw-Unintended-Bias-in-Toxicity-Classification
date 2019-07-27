@@ -218,7 +218,7 @@ def main():
         logging.warning(f"Output directory ({args.output_dir}) already exists and is not empty!")
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    tokenizer = BertTokenizer.from_pretrained(Path('../input/torch-bert-weights/bert-large-uncased-wwm/bert-large-uncased-whole-word-masking-vocab.txt'),
+    tokenizer = BertTokenizer.from_pretrained(Path('../input/torch-bert-weights/bert-large-uncased-whole-word-masking-vocab.txt'),
                                               do_lower_case=args.do_lower_case)
 
     total_train_examples = 0
