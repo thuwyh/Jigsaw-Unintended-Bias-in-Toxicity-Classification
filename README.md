@@ -1,4 +1,6 @@
 # Jigsaw-Unintended-Bias-in-Toxicity-Classification
+Competition: https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification
+
 Since we have rearranged the repo and we do not have enough time to rerun all scripts, there may be some path related errors.
 Please kindly modify the code or put the files in the right place required by the code.
 
@@ -11,12 +13,12 @@ Please kindly modify the code or put the files in the right place required by th
 - gensim
 
 ## models
-- bert-large-uncased (finetuned language model)
-- bert-large-cased (finetuned language model)
+- bert-large-uncased (further pretrained with competition data)
+- bert-large-cased (further pretrained with competition data)
 - bert-large-cased (trained with uncased data)
-- bert-large-wwm-uncased (finetuned language model)
+- bert-large-wwm-uncased (further pretrained with competition data)
 - bert-large-wwm-cased
-- bert-base-uncased (finetuned language model)
+- bert-base-uncased (further pretrained with competition data)
 - GPT-2
 - 3*RNN (13 models)
 
