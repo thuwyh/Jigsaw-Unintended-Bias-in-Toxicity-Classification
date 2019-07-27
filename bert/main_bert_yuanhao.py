@@ -88,7 +88,7 @@ class TrainDataset(Dataset):
         self._identity_df = identity_df
         self._weights = weights
         self._split_point = split_point
-        VOCAB_PATH = Path('../input/torch-bert-weights/%s-vocab.txt' % (model))
+        VOCAB_PATH = Path('../input/torch-bert-weights/%s/vocab.txt' % (model))
 
         if model in ["bert-base-uncased", "bert-large-uncased", "mybert", "mybert-large-uncased", "mybert-wwm-uncased",
                      'mybert-base-uncased']:

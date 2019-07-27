@@ -53,10 +53,10 @@ cd ..
 
 ```bash
 cd pretrain_bert
-python finetune_lm_large_uncased --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-large-uncased --do_lower_case --output_dir ../input/torch-bert-weights/mybert_large_uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
-python finetune_lm_large_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-large-cased --output_dir ../input/torch-bert-weights/mybert_large_cased --epochs 1 --fp16 --gradient_accumulation_steps 4
-python finetune_lm_wwm.py --pregenerated_data ../input/lm_data_wwm/ --bert_model bert-large-wwm --do_lower_case --output_dir ../input/torch-bert-weights/mybert_wwm --epochs 1 --fp16 --gradient_accumulation_steps 4
-python finetune_lm_base_uncased.py --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-base-uncased --output_dir ../input/torch-bert-weights/mybert_base_uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_large_uncased --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-large-uncased --do_lower_case --output_dir ../input/torch-bert-weights/mybert-large-uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_large_cased.py --pregenerated_data ../input/lm_data_cased/ --bert_model bert-large-cased --output_dir ../input/torch-bert-weights/mybert-large-cased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_wwm.py --pregenerated_data ../input/lm_data_wwm/ --bert_model bert-large-wwm --do_lower_case --output_dir ../input/torch-bert-weights/mybert-wwm-uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
+python finetune_lm_base_uncased.py --pregenerated_data ../input/lm_data_uncased/ --bert_model bert-base-uncased --output_dir ../input/torch-bert-weights/mybert-base-uncased --epochs 1 --fp16 --gradient_accumulation_steps 4
 cd ..
 ```
 
@@ -64,11 +64,11 @@ cd ..
 ```bash
 cd bert
 ./train_bert_large_cased.sh
-./train_finetune_bert_base_uncased.sh
-./train_finetune_bert_large_cased.sh
+./train_finetuned_bert_base_uncased.sh
+./train_finetuned_bert_large_cased.sh
 ./train-bert-wwmcased.sh
-python main_bert_yuanhao.py train_all mybert-large-uncased_all --model mybert-large-uncased --lr 0.00005 --batch-size 20 --step 7 --lr_layerdecay 0.98 --split_point 0.25 --kloss 0.02 --clean
-python main_bert_yuanhao.py train_all mybert-wwm-uncased_all --model mybert-wwm-uncased --lr 0.00005 --batch-size 20 --step 7 --lr_layerdecay 0.98 --split_point 0.25 --kloss 0.02 --clean
+./train_finetuned_bert_wwm_uncased.sh
+./train_finetuned_bert_large_uncased.sh
 ```
 
 ### train gpt2 models
@@ -79,7 +79,8 @@ cd ..
 ```
 
 ### train rnn models
-We trained 3 different kinds of RNN models, 
+We trained 3 different kinds of RNN models during the competition, and they are much similar.
+We only include the best one in this repo for simplicity. 
 ```bash
 cd rnn
 python train_with_feature_v2.py

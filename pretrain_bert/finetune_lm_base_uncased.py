@@ -168,6 +168,8 @@ def main():
                         type=int,
                         default=42,
                         help="random seed for initialization")
+    parser.add_argument('--debug',
+                        action='store_true')
     args = parser.parse_args()
 
     assert args.pregenerated_data.is_dir(), \
@@ -324,6 +326,9 @@ def main():
                     optimizer.step()
                     optimizer.zero_grad()
                     global_step += 1
+
+                if args.debug and step>1000:
+                    break
 
     # Save a trained model
     logging.info("** ** * Saving fine-tuned model ** ** * ")

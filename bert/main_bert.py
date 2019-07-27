@@ -86,7 +86,7 @@ class TrainDataset(Dataset):
         self._identity_df = identity_df
         self._weights = weights
         self._split_point = split_point
-        VOCAB_PATH = Path('../input/torch-bert-weights/%s-vocab.txt' % (model))
+        VOCAB_PATH = Path('../input/torch-bert-weights/%s/vocab.txt' % (model))
 
         self._tokenizer = BertTokenizer.from_pretrained(
             VOCAB_PATH, cache_dir=None, do_lower_case=do_lower_case)
@@ -317,7 +317,7 @@ def main():
                             "wwmcased",  "mybert-large-uncased", 'mybert-wwm-uncased']:
             NUM_LAYERS = 24
         else:
-            exit(1)
+            raise ValueError(args.model+' is a invalid model name')
 
         optimizer_grouped_parameters = [
             {'params': model.bert.bert.embeddings.parameters(), 'lr': args.lr * (args.lr_layerdecay ** NUM_LAYERS)},
