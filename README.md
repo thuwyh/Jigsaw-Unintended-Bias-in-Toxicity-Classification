@@ -1,6 +1,10 @@
 # Jigsaw-Unintended-Bias-in-Toxicity-Classification
 Competition: https://www.kaggle.com/c/jigsaw-unintended-bias-in-toxicity-classification
 
+- Team Name: Harness the beasts|驯服巨兽
+- Private Leaderboard Score: 0.94649
+- Private Leaderboard Place: 10th
+
 Since we have rearranged the repo and we do not have enough time to rerun all scripts, there may be some path related errors.
 Please kindly modify the code or put the files in the right place required by the code.
 
